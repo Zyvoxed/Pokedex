@@ -1,80 +1,121 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/pokemon_details.dart';
+import '../models/pokemon.dart';
+import '../utils/text_utils.dart';
 
 class PokemonService {
-  Future<PokemonDetails> fetchPokemonDetails(int id) async {
-    // 1) Fetch main Pokémon data
-    final response = await http.get(
-      Uri.parse('https://pokeapi.co/api/v2/pokemon/$id'),
+  static Future<PokemonDetails> fetchPokemonDetails(String name) async {
+    // Fetch basic Pokémon data
+    final pokemonResponse = await http.get(
+      Uri.parse('https://pokeapi.co/api/v2/pokemon/$name'),
     );
-    final pokemonJson = json.decode(response.body);
 
-    // Extract description
+    if (pokemonResponse.statusCode != 200) {
+      throw Exception('Failed to load Pokémon');
+    }
+
+    final pokemonJson = json.decode(pokemonResponse.body);
+
+    // Fetch species info for description, region, breeding, and training
     final speciesResponse = await http.get(
-      Uri.parse('https://pokeapi.co/api/v2/pokemon-species/$id'),
+      Uri.parse(
+        'https://pokeapi.co/api/v2/pokemon-species/${pokemonJson['id']}',
+      ),
     );
-    final speciesJson = json.decode(speciesResponse.body);
 
     String description = '';
-    for (var entry in speciesJson['flavor_text_entries']) {
-      if (entry['language']['name'] == 'en') {
-        description = entry['flavor_text']
-            .replaceAll('\n', ' ')
-            .replaceAll('\f', ' ');
-        break;
+    String region = '';
+    String evYield = '';
+    String catchRate = '';
+    String baseFriendship = '';
+    String baseExp = '';
+    String growthRate = '';
+    String genderRatio = '';
+    String eggCycles = '';
+    List<String> eggGroups = [];
+
+    if (speciesResponse.statusCode == 200) {
+      final speciesJson = json.decode(speciesResponse.body);
+
+      // Description
+      final flavorTextEntries = speciesJson['flavor_text_entries'] as List;
+      final englishText = flavorTextEntries.firstWhere(
+        (f) => f['language']['name'] == 'en',
+        orElse: () => null,
+      );
+      description = englishText != null
+          ? (englishText['flavor_text'] as String).replaceAll('\n', ' ')
+          : '';
+
+      // Region from generation
+      if (speciesJson['generation'] != null) {
+        final genUrl = speciesJson['generation']['url'];
+        final genResponse = await http.get(Uri.parse(genUrl));
+        if (genResponse.statusCode == 200) {
+          final genJson = json.decode(genResponse.body);
+          region = genJson['main_region']['name'];
+        }
+      }
+
+      // Training info
+      evYield =
+          (pokemonJson['stats'] != null && pokemonJson['stats'].isNotEmpty)
+          ? speciesJson['base_happiness'].toString()
+          : 'N/A';
+      catchRate = speciesJson['capture_rate']?.toString() ?? 'N/A';
+      baseFriendship = speciesJson['base_happiness']?.toString() ?? 'N/A';
+      baseExp = pokemonJson['base_experience']?.toString() ?? 'N/A';
+      growthRate = speciesJson['growth_rate'] != null
+          ? capitalize(speciesJson['growth_rate']['name'])
+          : 'N/A';
+
+      // Breeding info
+      if (speciesJson['gender_rate'] != null) {
+        int rate = speciesJson['gender_rate'];
+        if (rate == -1) {
+          genderRatio = 'Genderless';
+        } else {
+          double malePercent = (8 - rate) / 8 * 100;
+          double femalePercent = rate / 8 * 100;
+          genderRatio =
+              'Male: ${malePercent.toStringAsFixed(1)}%, Female: ${femalePercent.toStringAsFixed(1)}%';
+        }
+      }
+
+      eggCycles = speciesJson['hatch_counter'] != null
+          ? ((speciesJson['hatch_counter'] + 1) * 255 / 60).toStringAsFixed(0)
+          : 'N/A';
+
+      if (speciesJson['egg_groups'] != null) {
+        eggGroups = (speciesJson['egg_groups'] as List<dynamic>)
+            .map<String>((e) => e['name'].toString())
+            .toList();
       }
     }
 
-    // 2) Fetch species details
-    final region = speciesJson['generation']['name']
-        .replaceAll('-', ' ')
-        .toUpperCase();
-
-    final baseFriendship = speciesJson['base_happiness'].toString();
-    final growthRate = speciesJson['growth_rate']['name'];
-
-    // Breeding Info
-    final genderRate = speciesJson['gender_rate'];
-    String genderRatio = '';
-
-    if (genderRate == -1) {
-      genderRatio = "Genderless";
-    } else {
-      double female = (genderRate / 8) * 100;
-      double male = 100 - female;
-      genderRatio = "♂ $male% / ♀ $female%";
-    }
-
-    final eggCycles = speciesJson['hatch_counter'].toString();
-    final eggGroups = List<String>.from(
-      speciesJson['egg_groups'].map((g) => g['name']),
-    );
-
-    // 3) Fetch training info
-    final baseExp = pokemonJson['base_experience'].toString();
-    final catchRate = speciesJson['capture_rate'].toString();
-
-    // 4) Weakness & Strength (Type damage relations)
+    // Weaknesses / Strong Against
     List<String> weaknesses = [];
     List<String> strongAgainst = [];
 
-    for (var t in pokemonJson['types']) {
-      final typeUrl = t['type']['url'];
-      final typeRes = await http.get(Uri.parse(typeUrl));
-      final typeJson = json.decode(typeRes.body);
+    for (var typeEntry in pokemonJson['types']) {
+      final typeUrl = typeEntry['type']['url'];
+      final typeResponse = await http.get(Uri.parse(typeUrl));
+      if (typeResponse.statusCode == 200) {
+        final typeJson = json.decode(typeResponse.body);
+        final damageRelations = typeJson['damage_relations'];
 
-      weaknesses.addAll(
-        (typeJson['damage_relations']['double_damage_from'] as List).map(
-          (e) => e['name'],
-        ),
-      );
+        weaknesses.addAll(
+          List<String>.from(
+            damageRelations['double_damage_from'].map((t) => t['name']),
+          ),
+        );
 
-      strongAgainst.addAll(
-        (typeJson['damage_relations']['double_damage_to'] as List).map(
-          (e) => e['name'],
-        ),
-      );
+        strongAgainst.addAll(
+          List<String>.from(
+            damageRelations['double_damage_to'].map((t) => t['name']),
+          ),
+        );
+      }
     }
 
     weaknesses = weaknesses.toSet().toList();
@@ -86,7 +127,7 @@ class PokemonService {
       weaknesses: weaknesses,
       strongAgainst: strongAgainst,
       region: region,
-      evYield: "",
+      evYield: evYield,
       catchRate: catchRate,
       baseFriendship: baseFriendship,
       baseExp: baseExp,

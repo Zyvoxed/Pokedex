@@ -35,4 +35,32 @@ class PokemonColor {
     );
     return darkerHsl.toColor();
   }
+
+  // Stat colors
+  static const Map<String, Color> statColors = {
+    'hp': Colors.red,
+    'attack': Colors.orange,
+    'defense': Color(0xFFF5E03C),
+    'special-attack': Colors.purple,
+    'special-defense': Colors.green,
+    'speed': Colors.blue,
+  };
+
+  static Color statColor(String stat) {
+    return statColors[stat.toLowerCase()] ?? Colors.grey;
+  }
+
+  // Stat display names
+  static const Map<String, String> statDisplayNames = {
+    'hp': 'HP',
+    'attack': 'Attack',
+    'defense': 'Defense',
+    'special-attack': 'Sp.Atk',
+    'special-defense': 'Sp.Def',
+    'speed': 'Speed',
+  };
+
+  static String displayName(String stat) {
+    return statDisplayNames[stat.toLowerCase()] ?? stat;
+  }
 }

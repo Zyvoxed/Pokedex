@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'providers/pokemon_provider.dart';
 import 'pages/home_page.dart';
+import 'bloc/favorites_bloc.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,7 +19,12 @@ void main() {
 
   runApp(
     MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => PokemonProvider())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => PokemonProvider()),
+        BlocProvider<FavoritesBloc>(
+          create: (context) => FavoritesBloc()..add(LoadFavorites()),
+        ),
+      ],
       child: const MyApp(),
     ),
   );

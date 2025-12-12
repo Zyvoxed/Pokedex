@@ -1,34 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import '../models/pokemon_details.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../models/pokemon.dart';
+import '../services/pokemon_service.dart';
 import '../utils/pokemon_color.dart';
+import '../bloc/favorites_bloc.dart';
 
-// Capitalize first letter
+// Capitalize the first letter
 String capitalize(String s) {
   if (s.isEmpty) return s;
   return s[0].toUpperCase() + s.substring(1);
 }
-
-// Define color mapping for stats
-Map<String, Color> statColors = {
-  'hp': Colors.red,
-  'attack': Colors.orange,
-  'defense': Colors.yellow.shade700,
-  'special-attack': Colors.purple,
-  'special-defense': Colors.green,
-  'speed': Colors.blue,
-};
-
-// Abbreviated stat display names
-final Map<String, String> statDisplayNames = {
-  'hp': 'HP',
-  'attack': 'Attack',
-  'defense': 'Defense',
-  'special-attack': 'Sp.Atk',
-  'special-defense': 'Sp.Def',
-  'speed': 'Speed',
-};
 
 class PokemonDetailsPage extends StatefulWidget {
   final String name;
@@ -48,141 +29,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _pokemonDetails = fetchPokemonDetails(widget.name);
-  }
-
-  Future<PokemonDetails> fetchPokemonDetails(String name) async {
-    final pokemonResponse = await http.get(
-      Uri.parse('https://pokeapi.co/api/v2/pokemon/$name'),
-    );
-
-    if (pokemonResponse.statusCode != 200) {
-      throw Exception('Failed to load Pokémon');
-    }
-
-    final pokemonJson = json.decode(pokemonResponse.body);
-
-    // Fetch species info for description, region, breeding, and training
-    final speciesResponse = await http.get(
-      Uri.parse(
-        'https://pokeapi.co/api/v2/pokemon-species/${pokemonJson['id']}',
-      ),
-    );
-
-    String description = '';
-    String region = '';
-    String evYield = '';
-    String catchRate = '';
-    String baseFriendship = '';
-    String baseExp = '';
-    String growthRate = '';
-    String genderRatio = '';
-    String eggCycles = '';
-    List<String> eggGroups = [];
-
-    if (speciesResponse.statusCode == 200) {
-      final speciesJson = json.decode(speciesResponse.body);
-
-      // Description
-      final flavorTextEntries = speciesJson['flavor_text_entries'] as List;
-      final englishText = flavorTextEntries.firstWhere(
-        (f) => f['language']['name'] == 'en',
-        orElse: () => null,
-      );
-      description = englishText != null
-          ? (englishText['flavor_text'] as String).replaceAll('\n', ' ')
-          : '';
-
-      // Region from generation
-      if (speciesJson['generation'] != null) {
-        final genUrl = speciesJson['generation']['url'];
-        final genResponse = await http.get(Uri.parse(genUrl));
-        if (genResponse.statusCode == 200) {
-          final genJson = json.decode(genResponse.body);
-          region = genJson['main_region']['name'];
-        }
-      }
-
-      // Training info
-      evYield =
-          (pokemonJson['stats'] != null && pokemonJson['stats'].isNotEmpty)
-          ? speciesJson['base_happiness']
-                .toString() // Placeholder, will calculate EVs later
-          : 'N/A';
-      catchRate = speciesJson['capture_rate']?.toString() ?? 'N/A';
-      baseFriendship = speciesJson['base_happiness']?.toString() ?? 'N/A';
-      baseExp = pokemonJson['base_experience']?.toString() ?? 'N/A';
-      growthRate = speciesJson['growth_rate'] != null
-          ? capitalize(speciesJson['growth_rate']['name'])
-          : 'N/A';
-
-      // Breeding info
-      if (speciesJson['gender_rate'] != null) {
-        int rate = speciesJson['gender_rate'];
-        if (rate == -1) {
-          genderRatio = 'Genderless';
-        } else {
-          double malePercent = (8 - rate) / 8 * 100;
-          double femalePercent = rate / 8 * 100;
-          genderRatio =
-              'Male: ${malePercent.toStringAsFixed(1)}%, Female: ${femalePercent.toStringAsFixed(1)}%';
-        }
-      }
-
-      eggCycles = speciesJson['hatch_counter'] != null
-          ? ((speciesJson['hatch_counter'] + 1) * 255 / 60).toStringAsFixed(0)
-          : 'N/A';
-
-      if (speciesJson['egg_groups'] != null) {
-        eggGroups = List<String>.from(
-          speciesJson['egg_groups'].map((e) => e['name']),
-        );
-      }
-    }
-
-    // Compute Weaknesses and Strong Against based on types
-    List<String> weaknesses = [];
-    List<String> strongAgainst = [];
-
-    for (var typeEntry in pokemonJson['types']) {
-      final typeUrl = typeEntry['type']['url'];
-      final typeResponse = await http.get(Uri.parse(typeUrl));
-      if (typeResponse.statusCode == 200) {
-        final typeJson = json.decode(typeResponse.body);
-        final damageRelations = typeJson['damage_relations'];
-
-        weaknesses.addAll(
-          List<String>.from(
-            damageRelations['double_damage_from'].map((t) => t['name']),
-          ),
-        );
-
-        strongAgainst.addAll(
-          List<String>.from(
-            damageRelations['double_damage_to'].map((t) => t['name']),
-          ),
-        );
-      }
-    }
-
-    weaknesses = weaknesses.toSet().toList();
-    strongAgainst = strongAgainst.toSet().toList();
-
-    return PokemonDetails.fromJson(
-      pokemonJson,
-      description,
-      weaknesses: weaknesses,
-      strongAgainst: strongAgainst,
-      region: region,
-      evYield: evYield,
-      catchRate: catchRate,
-      baseFriendship: baseFriendship,
-      baseExp: baseExp,
-      growthRate: growthRate,
-      genderRatio: genderRatio,
-      eggCycles: eggCycles,
-      eggGroups: eggGroups,
-    );
+    _pokemonDetails = PokemonService.fetchPokemonDetails(widget.name);
   }
 
   Widget buildTabContent(PokemonDetails pokemon) {
@@ -195,7 +42,6 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Description
               const Text(
                 'Description',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -207,10 +53,8 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                 textAlign: TextAlign.justify,
               ),
               const SizedBox(height: 16),
-
-              // Region, Height & Weight
               Text(
-                'Region: ${capitalize(pokemon.region)}',
+                'Region: ${pokemon.region}',
                 style: const TextStyle(fontSize: 16, color: Colors.black87),
               ),
               const SizedBox(height: 4),
@@ -224,8 +68,6 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                 style: const TextStyle(fontSize: 16, color: Colors.black87),
               ),
               const SizedBox(height: 50),
-
-              // Weaknesses
               const Text(
                 'Weaknesses',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -237,7 +79,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                 children: pokemon.weaknesses
                     .map(
                       (t) => Chip(
-                        label: Text(capitalize(t)),
+                        label: Text(t),
                         backgroundColor: PokemonColor.fromType(
                           t,
                         ).withOpacity(0.8),
@@ -258,8 +100,6 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                     .toList(),
               ),
               const SizedBox(height: 16),
-
-              // Strong Against
               const Text(
                 'Strong Against',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -271,7 +111,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                 children: pokemon.strongAgainst
                     .map(
                       (t) => Chip(
-                        label: Text(capitalize(t)),
+                        label: Text(t),
                         backgroundColor: PokemonColor.fromType(
                           t,
                         ).withOpacity(0.8),
@@ -292,8 +132,6 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                     .toList(),
               ),
               const SizedBox(height: 50),
-
-              // Training Info
               const Text(
                 'Training',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -320,8 +158,6 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                 style: const TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 20),
-
-              // Breeding Info
               const Text(
                 'Breeding',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -336,7 +172,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                 style: const TextStyle(fontSize: 16),
               ),
               Text(
-                'Egg Groups: ${pokemon.eggGroups.map(capitalize).join(', ')}',
+                'Egg Groups: ${pokemon.eggGroups.join(', ')}',
                 style: const TextStyle(fontSize: 16),
               ),
             ],
@@ -369,7 +205,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Text(
-                      capitalize(ability),
+                      ability,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         color: Colors.white,
@@ -383,19 +219,16 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
           ),
         ),
 
-        // Stats Tab with colored bars
+        // Stats Tab
         SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             children: pokemon.stats.map((s) {
               final statName = s['name'] as String;
-              final displayName =
-                  statDisplayNames[statName.toLowerCase()] ??
-                  capitalize(statName);
+              final displayName = PokemonColor.displayName(statName);
               final statValue = s['value'] as int;
-              final maxValue = 150; // max stat for scaling
-              final barColor =
-                  statColors[statName.toLowerCase()] ?? Colors.grey;
+              final maxValue = 150;
+              final barColor = PokemonColor.statColor(statName);
 
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6.0),
@@ -466,6 +299,43 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                         onPressed: () => Navigator.pop(context),
                       ),
                     ),
+                    // Favorite Button
+                    Positioned(
+                      top: 60,
+                      right: 8,
+                      child: BlocBuilder<FavoritesBloc, FavoritesState>(
+                        builder: (context, state) {
+                          final isFavorite = state.favorites.any(
+                            (p) =>
+                                p.name.toLowerCase() ==
+                                pokemon.name.toLowerCase(),
+                          );
+                          return IconButton(
+                            icon: Icon(
+                              isFavorite
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                            onPressed: () {
+                              final bloc = context.read<FavoritesBloc>();
+                              final simplePokemon = Pokemon(
+                                name: pokemon.name,
+                                url:
+                                    'https://pokeapi.co/api/v2/pokemon/${pokemon.id}/', // can be any valid URL for ID
+                              );
+
+                              if (isFavorite) {
+                                bloc.add(RemoveFavorite(simplePokemon));
+                              } else {
+                                bloc.add(AddFavorite(simplePokemon));
+                              }
+                            },
+                          );
+                        },
+                      ),
+                    ),
                     Positioned(
                       top: 110,
                       left: 16,
@@ -477,7 +347,6 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Name
                                 Text(
                                   capitalize(pokemon.name),
                                   style: const TextStyle(
@@ -487,14 +356,13 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                                   ),
                                 ),
                                 const SizedBox(height: 0),
-                                // Type Chips
                                 Wrap(
                                   spacing: 6,
                                   runSpacing: 6,
                                   children: pokemon.types
                                       .map(
                                         (t) => Chip(
-                                          label: Text(capitalize(t)),
+                                          label: Text(t),
                                           backgroundColor:
                                               PokemonColor.fromType(
                                                 t,
@@ -520,7 +388,6 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                               ],
                             ),
                           ),
-                          // Pokémon number aligned with the name baseline
                           Baseline(
                             baseline: 42,
                             baselineType: TextBaseline.alphabetic,

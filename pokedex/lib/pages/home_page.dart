@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/pokemon_provider.dart';
 import '../widgets/pokemon_grid.dart';
+import 'favorites_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -51,7 +52,6 @@ class _HomePageState extends State<HomePage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Type selection
               DropdownButtonFormField<String>(
                 value: selectedType.isEmpty ? null : selectedType,
                 decoration: const InputDecoration(
@@ -60,12 +60,12 @@ class _HomePageState extends State<HomePage> {
                   labelStyle: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(
-                      color: const Color.fromARGB(255, 239, 99, 99),
+                      color: Color.fromARGB(255, 239, 99, 99),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderSide: BorderSide(
-                      color: const Color.fromARGB(255, 239, 99, 99),
+                      color: Color.fromARGB(255, 239, 99, 99),
                     ),
                   ),
                 ),
@@ -85,7 +85,6 @@ class _HomePageState extends State<HomePage> {
                 },
               ),
               const SizedBox(height: 16),
-              // Region selection
               DropdownButtonFormField<String>(
                 value: selectedRegion.isEmpty ? null : selectedRegion,
                 decoration: const InputDecoration(
@@ -95,12 +94,12 @@ class _HomePageState extends State<HomePage> {
                   labelStyle: TextStyle(color: Colors.black),
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(
-                      color: const Color.fromARGB(255, 239, 99, 99),
+                      color: Color.fromARGB(255, 239, 99, 99),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderSide: BorderSide(
-                      color: const Color.fromARGB(255, 239, 99, 99),
+                      color: Color.fromARGB(255, 239, 99, 99),
                     ),
                   ),
                 ),
@@ -150,7 +149,6 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: Column(
         children: [
-          // Top title & search
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -216,9 +214,18 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-          // Body: Pokémon Grid
           Expanded(child: PokemonGrid(scrollController: _scrollController)),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color.fromARGB(255, 239, 99, 99),
+        child: const Icon(Icons.favorite),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const FavoritesPage()),
+          );
+        },
       ),
     );
   }

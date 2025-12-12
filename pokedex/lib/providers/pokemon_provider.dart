@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../models/pokemon_details.dart';
+import '../models/pokemon.dart';
 
 class PokemonProvider with ChangeNotifier {
   List<PokemonDetails> _pokemonList = [];
