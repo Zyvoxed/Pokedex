@@ -4,6 +4,7 @@ import '../models/pokemon.dart';
 import '../services/pokemon_service.dart';
 import '../utils/pokemon_color.dart';
 import '../bloc/favorites_bloc.dart';
+import '../pages/ability_details_page.dart';
 
 // Capitalize the first letter
 String capitalize(String s) {
@@ -194,22 +195,40 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
             itemCount: pokemon.abilities.length,
             itemBuilder: (context, index) {
               final ability = pokemon.abilities[index];
-              return Card(
-                color: PokemonColor.fromType(
-                  pokemon.types.first,
-                ).withOpacity(0.7),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      ability,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+              final abilityName = capitalize(ability);
+
+              return InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AbilityDetailsPage(
+                        abilityUrl:
+                            'https://pokeapi.co/api/v2/ability/${ability.toLowerCase()}',
+                        type: pokemon.types.first,
+                      ),
+                    ),
+                  );
+                },
+                child: Card(
+                  color: PokemonColor.fromType(
+                    pokemon.types.first,
+                  ).withOpacity(0.7),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        abilityName,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -287,12 +306,12 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
           body: Column(
             children: [
               Container(
-                height: screenHeight * 0.5,
+                height: screenHeight * 0.55,
                 color: bgColor,
                 child: Stack(
                   children: [
                     Positioned(
-                      top: 55,
+                      top: 64,
                       left: 8,
                       child: IconButton(
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -301,7 +320,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                     ),
                     // Favorite Button
                     Positioned(
-                      top: 60,
+                      top: 64,
                       right: 8,
                       child: BlocBuilder<FavoritesBloc, FavoritesState>(
                         builder: (context, state) {
@@ -337,7 +356,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                       ),
                     ),
                     Positioned(
-                      top: 110,
+                      top: 132,
                       left: 16,
                       right: 16,
                       child: Row(
@@ -403,7 +422,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                       ),
                     ),
                     Positioned(
-                      top: screenHeight * 0.27,
+                      top: screenHeight * 0.32,
                       left: 0,
                       right: 0,
                       child: Center(
@@ -431,7 +450,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage>
                 ),
               ),
               Container(
-                height: screenHeight * 0.5,
+                height: screenHeight * 0.45,
                 decoration: const BoxDecoration(
                   color: Color.fromARGB(255, 255, 255, 255),
                   borderRadius: BorderRadius.vertical(top: Radius.circular(30)),

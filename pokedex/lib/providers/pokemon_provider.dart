@@ -21,9 +21,8 @@ class PokemonProvider with ChangeNotifier {
   List<String> _regions = [];
   List<String> get regions => _regions;
 
-  String get searchQuery => _searchQuery;
-  String get selectedType => _selectedType;
   String? get selectedRegion => _selectedRegion;
+  String get selectedType => _selectedType;
 
   PokemonProvider() {
     fetchTypes();
@@ -201,16 +200,19 @@ class PokemonProvider with ChangeNotifier {
 
   List<PokemonDetails> get filteredPokemon {
     var list = _pokemonList;
+
     if (_searchQuery.isNotEmpty) {
       list = list
           .where((p) => p.name.toLowerCase().contains(_searchQuery))
           .toList();
     }
+
     if (_selectedType.isNotEmpty) {
       list = list
           .where((p) => p.types.contains(_selectedType.toLowerCase()))
           .toList();
     }
+
     if (_selectedRegion != null && _selectedRegion!.isNotEmpty) {
       list = list
           .where(
@@ -218,6 +220,7 @@ class PokemonProvider with ChangeNotifier {
           )
           .toList();
     }
+
     return list;
   }
 

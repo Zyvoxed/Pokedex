@@ -1,7 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/pokemon.dart';
-import '../utils/text_utils.dart';
+
+String capitalize(String s) {
+  if (s.isEmpty) return s;
+  return s[0].toUpperCase() + s.substring(1);
+}
 
 class PokemonService {
   static Future<PokemonDetails> fetchPokemonDetails(String name) async {

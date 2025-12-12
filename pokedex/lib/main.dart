@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'providers/pokemon_provider.dart';
 import 'pages/home_page.dart';
 import 'bloc/favorites_bloc.dart';
@@ -9,11 +10,11 @@ import 'bloc/favorites_bloc.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Make status bar follow app background color
+  // Transparent status bar with white icons
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent, // fully transparent
-      statusBarIconBrightness: Brightness.light, // white icons
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
     ),
   );
 
@@ -38,11 +39,32 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Pokédex',
+
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
+
+        // Modern color scheme
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFE63946), // modern pokemon red
+          brightness: Brightness.light,
+        ),
+
         scaffoldBackgroundColor: Colors.white,
+
+        // Apply modern font everywhere
+        textTheme: GoogleFonts.poppinsTextTheme(),
+        appBarTheme: AppBarTheme(
+          elevation: 0,
+          backgroundColor: const Color(0xFFE63946),
+          titleTextStyle: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
       ),
+
       home: const HomePage(),
     );
   }
